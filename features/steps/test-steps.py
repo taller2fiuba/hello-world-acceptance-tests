@@ -7,4 +7,4 @@ def step_impl(context):
 
 @then('devuelve hello world')
 def step_impl(context):
-    assert context.response == {'title': 'Hello world'}
+    assert context.response == {'title': 'Hello world by NodeJS'}
