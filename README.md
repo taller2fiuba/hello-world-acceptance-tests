@@ -39,3 +39,18 @@ $ ./run-acceptance-tests.sh --node-url=http://localhost:27080 \
 
 En este caso no se clonará ningún repositorio, las pruebas se correrán dentro 
 de Docker realizando solicitudes a dichas URL.
+
+### Para correrlo desde un repositorio ya clonado
+
+```bash
+$ ./run-acceptance-tests.sh --node-repo=./hello-world-node
+```
+
+En este caso no se clonará el repo de Node, se levantará la versión productiva desde
+el repositorio ya clonado en `./hello-world-node`, y se clonará la versión productiva
+de Flask. En este caso no se realizará limpieza de la ejecución. El contenedor se 
+detendrá mediante `docker-compose stop`.
+
+
+Todos los parámetros `--<flask|node>-*` tienen su versión tanto para Node como para 
+Flask aunque no esté explícitamente mencionado en el ejemplo.

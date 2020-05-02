@@ -21,6 +21,14 @@
 #                           --flask-url=http://localhost:5000
 # En este caso no se clonará ningún repositorio, las pruebas se correrán
 # dentro de Docker realizando solicitudes a dichas URL.
+#
+# Para correrlo levantando la versión productiva desde un repositorio ya clonado:
+# ./run-acceptance-tests.sh --node-repo=./hello-world-node
+# En este caso no se realizará limpieza de la ejecución. El contenedor se 
+# detendrá mediante `docker-compose stop`.
+#
+# Todos los parámetros --<flask|node>-* tienen sus versiones tanto para node 
+# como para flask aunque no esté mencionado en el ejemplo.
 
 REPO_HELLO_NODE="https://github.com/taller2fiuba/hello-world-node"
 REPO_HELLO_FLASK="https://github.com/taller2fiuba/hello-world-flask"
@@ -44,6 +52,14 @@ case $arg in
     ;;
     --node-url=*)
         export NODE_URL="${arg#*=}"
+    shift
+    ;;
+    --node-repo=*)
+        export NODE_REPO_DIR=$(readlink -f "${arg#*=}")
+    shift
+    ;;
+    --flask-repo=*)
+        export FLASK_REPO_DIR=$(readlink -f "${arg#*=}")
     shift
     ;;
     *)
@@ -81,33 +97,53 @@ function cleanup() {
     if [[ -d $TMPDIR/hello-world-node ]]; then
         cd $TMPDIR/hello-world-node
         docker-compose down -v --rmi local
+    else
+        if [[ -d $NODE_REPO_DIR ]]; then
+            cd $NODE_REPO_DIR
+            docker-compose stop
+        fi
     fi
     if [[ -d $TMPDIR/hello-world-flask ]]; then
         cd $TMPDIR/hello-world-flask
         docker-compose down -v --rmi local
+    else 
+        if [[ -d $FLASK_REPO_DIR ]]; then
+            cd $FLASK_REPO_DIR
+            docker-compose stop
+        fi
     fi
     cd $TMPDIR/..
     rm -rf $TMPDIR
 }
 
 function setup_flask() {
-    git clone $REPO_HELLO_FLASK
-    cd hello-world-flask
+    if [[ ! $FLASK_REPO_DIR ]]; then
+        echo 'Obteniendo versión productiva de Hello Flask'
+        cd $TMPDIR
+        git clone $REPO_HELLO_FLASK
+        export FLASK_REPO_DIR=$TMPDIR/hello-world-flask
+    fi
+    cd $FLASK_REPO_DIR
     export HELLO_FLASK_PORT=$(get_random_free_port)
     export FLASK_URL="http://localhost:$HELLO_FLASK_PORT"
+    echo "Configurando versión productiva de Hello Flask en $FLASK_URL"
     docker-compose up -d --build
     wait_server $FLASK_URL
-    cd ..
 }
 
 function setup_node() {
-    git clone $REPO_HELLO_NODE
-    cd hello-world-node
+    if [[ ! $NODE_REPO_DIR ]]; then
+        echo 'Obteniendo versión productiva de Hello Node'
+        cd $TMPDIR
+        git clone $REPO_HELLO_NODE
+        export NODE_REPO_DIR=$TMPDIR/hello-world-node
+    fi
+    cd $NODE_REPO_DIR
     export HELLO_NODE_PORT=$(get_random_free_port)
     export NODE_URL="http://localhost:$HELLO_NODE_PORT"
+    echo "Configurando versión productiva de Hello Node en $NODE_URL"
     docker-compose up -d --build
     wait_server $NODE_URL
-    cd ..
 }
 
 trap cleanup EXIT
@@ -120,12 +156,10 @@ TMPDIR=$(mktemp -d -t ci-XXXXXXXXXX)
 cd $TMPDIR
 
 if [[ ! $NODE_URL ]]; then
-    echo 'Obteniendo y configurando Hello Node...'
     setup_node
 fi
 
 if [[ ! $FLASK_URL ]]; then
-    echo 'Obteniendo y configurando Hello Flask...'
     setup_flask
 fi
 
