@@ -54,8 +54,13 @@ esac
 done
 
 function get_random_free_port() {
-    comm -23 <(seq 49152 65535 | sort) <(ss -Htan | awk '{print $4}' | cut -d':' -f2 | sort -u) | shuf | head -n 1
-}
+    while :
+    do
+        PORT="`shuf -i 49152-65535 -n 1`"
+        ss -lpn | grep -q ":$PORT " || break
+    done
+    echo $PORT
+}    
 
 function wait_server() {
     TIMEOUT=60
