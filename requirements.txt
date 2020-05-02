@@ -1,2 +1,2 @@
 behave==1.2.6
-request==2019.4.13
+requests==2.23.0
